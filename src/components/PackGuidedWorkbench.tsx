@@ -300,22 +300,6 @@ export function PackGuidedWorkbench() {
     setActiveView("detail");
   };
 
-  const excludeRow = (rowId: string) => {
-    updateRow(rowId, { status: "excluded", issueType: "excluded", issueLabel: "Excluded" });
-    setDetailScope(null);
-    setDetailFilter("excluded");
-    showFeedback({
-      intent: "warning",
-      message: "Row excluded from active totals. The excluded scope is shown so it can be restored."
-    });
-  };
-
-  const restoreRow = (rowId: string) => {
-    updateRow(rowId, { status: "included", issueType: "", issueLabel: "" });
-    setDetailFilter("all");
-    showFeedback({ intent: "primary", message: "Row restored and review state recalculated." });
-  };
-
   const addExposure = () => {
     const id = `UW-${Date.now()}`;
     const row = deriveReviewState({
@@ -545,8 +529,6 @@ export function PackGuidedWorkbench() {
                   sort={detailSort}
                   onSort={(key) => setDetailSort((current) => nextSort(current, key, numericDetailSorts))}
                   onUpdateRow={updateRow}
-                  onExcludeRow={excludeRow}
-                  onRestoreRow={restoreRow}
                   onDeleteRow={(row) => setDeleteTarget(row)}
                 />
               )}
@@ -1246,8 +1228,6 @@ function DetailTable({
   sort,
   onSort,
   onUpdateRow,
-  onExcludeRow,
-  onRestoreRow,
   onDeleteRow
 }: {
   rows: Array<ExposureRow & { city: string; sourceLabel: string; issueSort: string }>;
@@ -1256,11 +1236,9 @@ function DetailTable({
   sort: { key: string; dir: "asc" | "desc" };
   onSort: (key: string) => void;
   onUpdateRow: (rowId: string, patch: Partial<ExposureRow>) => void;
-  onExcludeRow: (rowId: string) => void;
-  onRestoreRow: (rowId: string) => void;
   onDeleteRow: (row: ExposureRow) => void;
 }) {
-  const showActions = editMode || rows.some((row) => row.status === "excluded");
+  const showActions = editMode;
   return (
     <table className={`work-table detail-table ${Classes.HTML_TABLE} ${Classes.HTML_TABLE_STRIPED}`}>
       <thead>
@@ -1360,18 +1338,9 @@ function DetailTable({
                 <td className="status-col"><IssueTag row={row} /></td>
                 {showActions && (
                   <td className="actions-col">
-                    {row.status === "excluded" ? (
-                      <Button small icon="undo" text="Restore" aria-label={`Restore ${row.id}`} onClick={() => onRestoreRow(row.id)} />
-                    ) : editMode ? (
-                      <ButtonGroup>
-                        <Tooltip content="Exclude row">
-                          <Button small icon="disable" aria-label={`Exclude ${row.id}`} onClick={() => onExcludeRow(row.id)} />
-                        </Tooltip>
-                        <Tooltip content="Delete row">
-                          <Button small icon="trash" intent="danger" aria-label={`Delete ${row.id}`} onClick={() => onDeleteRow(row)} />
-                        </Tooltip>
-                      </ButtonGroup>
-                    ) : null}
+                    <Tooltip content="Delete row">
+                      <Button small icon="trash" intent="danger" aria-label={`Delete ${row.id}`} onClick={() => onDeleteRow(row)} />
+                    </Tooltip>
                   </td>
                 )}
               </tr>
