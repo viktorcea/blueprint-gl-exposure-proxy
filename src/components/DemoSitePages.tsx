@@ -28,6 +28,147 @@ type DemoRoute = {
   sourcePath?: string;
 };
 
+type Severity = "P0" | "P1" | "P2" | "P3";
+
+type ReportFinding = {
+  severity: Severity;
+  title: string;
+  body: string;
+};
+
+const criticFindings: ReportFinding[] = [
+  {
+    severity: "P1",
+    title: "First-viewport review summary is passive",
+    body: "The header count says risk exists, but does not name Missing class or Blank exposure or route directly to affected rows."
+  },
+  {
+    severity: "P1",
+    title: "Rollup review indicators are too compact",
+    body: "Issue drilldown works, but the visible rollup state is a small far-right icon instead of an inline issue label/count."
+  },
+  {
+    severity: "P1",
+    title: "Active scope and filter state are easy to misread",
+    body: "A scoped Detail tag, a Show select, and a separate Filter popover force the user to infer which filters are active."
+  },
+  {
+    severity: "P2",
+    title: "Excluded-row workflow is traceable but under-communicated",
+    body: "Exclusion is preserved and reversible, but the transition is quiet enough that users may confuse exclusion with deletion."
+  },
+  {
+    severity: "P2",
+    title: "Detail issue semantics are diluted into long table text",
+    body: "Missing, blank, unknown, and low-confidence meanings are present, but users must scan several ordinary cells to diagnose a row."
+  },
+  {
+    severity: "P2",
+    title: "Edit mode turns the whole table into a form",
+    body: "Full-table edit is powerful, but it does not prioritize the small set of rows that actually need correction."
+  },
+  {
+    severity: "P2",
+    title: "Add exposure allows unresolved defaults",
+    body: "Adding unresolved data can be valid, but the baseline needs stronger validation or explicit unresolved confirmation."
+  },
+  {
+    severity: "P2",
+    title: "Save provides no closure after correction",
+    body: "Save exits edit mode without stating whether changes were accepted or whether review items remain."
+  },
+  {
+    severity: "P2",
+    title: "Narrow viewport pressure hides key affordances",
+    body: "At 390px, important review and correction targets can fall offscreen or become too compressed."
+  },
+  {
+    severity: "P3",
+    title: "No-results state is too generic",
+    body: "The empty state says No rows found instead of naming the active filter and next available action."
+  },
+  {
+    severity: "P3",
+    title: "Active summary tile behavior is useful but under-signaled",
+    body: "Metric tiles navigate and expand rollups, but the selected state is subtle enough to need narration."
+  }
+];
+
+const auditFindings: ReportFinding[] = [
+  {
+    severity: "P0",
+    title: "Edit/save can create an unflagged blank exposure",
+    body: "Clearing an included exposure and saving can show -- without Blank exposure treatment or attention-count changes."
+  },
+  {
+    severity: "P1",
+    title: "Programmatic labels are incomplete",
+    body: "Some selects, status sort controls, and compact status tags lack useful accessible names."
+  },
+  {
+    severity: "P1",
+    title: "Narrow viewport clips primary actions",
+    body: "At 390px, Edit and collapse actions can fall offscreen and table review targets become too compressed."
+  },
+  {
+    severity: "P1",
+    title: "Required component and workflow states are partial",
+    body: "Loading, unavailable/error, empty schedule, low confidence, validation, selected/focused, and restore states need better coverage."
+  },
+  {
+    severity: "P2",
+    title: "Review status communication is too compact",
+    body: "Detail status relies too heavily on compact tags, color, icon, or tooltip treatment."
+  },
+  {
+    severity: "P2",
+    title: "Filter and provenance behavior loses nuance",
+    body: "Low-confidence filtering, excluded-row filter options, and narrow viewport source trace need stronger treatment."
+  },
+  {
+    severity: "P2",
+    title: "Theming and state styling are not yet system-clean",
+    body: "State colors and structure are still concentrated in hard-coded CSS rather than reusable semantic roles."
+  }
+];
+
+const criticAcceptanceCriteria = [
+  "First load identifies active issue types and routes directly to affected Detail rows.",
+  "Rollup review indicators show visible issue labels/counts, not icon-only warnings.",
+  "Detail rows expose review-state tags for Missing class, Unknown state, Blank exposure, and Low confidence.",
+  "Blank exposure displays as -- while confirmed zero displays as 0.",
+  "Active Detail scopes, review-status filters, column filters, and result counts use one visible grammar.",
+  "Add, save, download, exclude, restore, and delete moments provide clear local-state feedback.",
+  "Narrow viewport behavior keeps review summary and primary correction actions reachable.",
+  "No-results states describe the active filter and next available action."
+];
+
+const auditAcceptanceCriteria = [
+  "Editing any exposure re-derives review state before save.",
+  "Clearing exposure increases the attention count and appears in Blank exposure filtering.",
+  "Resolving missing class, unknown state, or blank exposure clears issues only when required fields are valid.",
+  "Every select/input, icon-only action, and compact status has a programmatic label.",
+  "At 390px, Download, Edit/Add, Save/Cancel, and collapse/expand remain visible and clickable.",
+  "Fixture states cover loaded, collapsed, expanded, filtered no-results, excluded, low-confidence, validation, cancel, save, delete confirmation, and restore.",
+  "Styling uses semantic roles for action, text, borders, review attention, destructive, confirmed/resolved, selected, excluded, and surfaces."
+];
+
+const criticPackRecommendations = [
+  "Require an actionable first-viewport review summary in the design-system contract.",
+  "Add active scope plus review-status plus column-filter combinations to the component-state checklist.",
+  "Document visible reversible excluded-row state and excluded filter fixture coverage.",
+  "Add content patterns for Review status, Column filters, No excluded rows, save-with-review-items, and download-with-unresolved-items.",
+  "Update the magic-trick language so review risk must become visible in the first viewport."
+];
+
+const auditPackRecommendations = [
+  "Centralize review-state derivation instead of patching row fields directly.",
+  "Promote status badges, rollup review states, action clusters, and filter chips into reusable role components.",
+  "Define a mobile workbench pattern with reachable primary actions and deliberate table overflow.",
+  "Add deterministic fixtures for no-results, low-confidence, excluded/restore, source unavailable, and empty schedule states.",
+  "Move hard-coded colors into semantic proxy operational tokens."
+];
+
 function DemoSiteShell({
   title,
   description,
@@ -241,19 +382,113 @@ function FindingCard({
   title,
   body
 }: {
-  severity: string;
+  severity: Severity;
   title: string;
   body: string;
 }) {
+  const intent = severity === "P0" ? "danger" : severity === "P1" ? "warning" : undefined;
   return (
-    <Card className="demo-finding-card">
+    <Card className={`demo-finding-card severity-${severity.toLowerCase()}`}>
       <div className="demo-card-header">
         <h3>{title}</h3>
-        <Tag minimal intent={severity === "P0" || severity === "P1" ? "warning" : undefined}>
-          {severity}
-        </Tag>
+        <Tag minimal intent={intent}>{severity}</Tag>
       </div>
       <p>{body}</p>
+    </Card>
+  );
+}
+
+function ScoreSummary({
+  result,
+  score,
+  body,
+  sourcePath
+}: {
+  result: string;
+  score: string;
+  body: string;
+  sourcePath: string;
+}) {
+  return (
+    <section className="demo-report-summary">
+      <Card className="demo-score-card">
+        <div>
+          <span className="demo-score-label">Result</span>
+          <strong>{result}</strong>
+        </div>
+        <div>
+          <span className="demo-score-label">Score</span>
+          <strong>{score}</strong>
+        </div>
+      </Card>
+      <Callout className="demo-callout" intent="primary" icon="endorsed">
+        {body}
+      </Callout>
+      <SourcePath path={sourcePath} />
+    </section>
+  );
+}
+
+function SeverityGroup({
+  severity,
+  findings
+}: {
+  severity: Severity;
+  findings: ReportFinding[];
+}) {
+  if (!findings.length) return null;
+  return (
+    <section className="demo-section">
+      <div className="demo-section-heading">
+        <h2>{severity} Findings</h2>
+        <p>{severity === "P0" ? "Blocking issue to fix before the revision." : "Grouped directly from the source report."}</p>
+      </div>
+      <div className="demo-finding-grid">
+        {findings.map((finding) => (
+          <FindingCard key={`${finding.severity}-${finding.title}`} {...finding} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FindingGroups({ findings }: { findings: ReportFinding[] }) {
+  const severities: Severity[] = ["P0", "P1", "P2", "P3"];
+  return (
+    <>
+      {severities.map((severity) => (
+        <SeverityGroup
+          key={severity}
+          severity={severity}
+          findings={findings.filter((finding) => finding.severity === severity)}
+        />
+      ))}
+    </>
+  );
+}
+
+function ListPanel({
+  title,
+  items,
+  icon
+}: {
+  title: string;
+  items: string[];
+  icon: "tick" | "changes";
+}) {
+  return (
+    <Card className="demo-list-panel">
+      <div className="demo-card-header">
+        <h2>{title}</h2>
+        <Tag minimal icon={icon}>
+          {items.length}
+        </Tag>
+      </div>
+      <ul className="demo-check-list">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -265,54 +500,39 @@ export function CriticReportPendingPage() {
       description="Completed design-quality critique of the Blueprint baseline."
       activeRoute="/critic-report"
     >
-      <section className="demo-section">
-        <Callout className="demo-callout" intent="primary" icon="endorsed">
-          Overall result: pass with concerns. Design health score: 24 / 40.
-        </Callout>
-        <SourcePath path={criticReportPath} />
-      </section>
+      <ScoreSummary
+        result="Pass with concerns"
+        score="24 / 40"
+        sourcePath={criticReportPath}
+        body="The baseline is credible and functional, but the review workflow is too quiet. The pack-guided version should make risk visible, scoped, and actionable without restarting from a different UI."
+      />
 
       <section className="demo-section">
         <div className="demo-section-heading">
-          <h2>Top Risks</h2>
-          <p>The critique found a credible baseline whose review workflow is functional but too quiet.</p>
+          <h2>Highlighted Risks</h2>
+          <p>P1 items are the main design deltas the pack-guided version needs to make legible.</p>
         </div>
         <div className="demo-finding-grid">
-          <FindingCard
-            severity="P1"
-            title="First-viewport review summary is passive"
-            body="The header shows a compact count, but does not name Missing class or Blank exposure or route directly to affected rows."
-          />
-          <FindingCard
-            severity="P1"
-            title="Rollup review indicators are too compact"
-            body="Issue drilldown works, but the visible rollup state is a small far-right icon instead of an inline issue label/count."
-          />
-          <FindingCard
-            severity="P1"
-            title="Scope and filter state are easy to misread"
-            body="A scoped Detail tag, a Show select, and a separate Filter popover force the user to infer which filters are active."
-          />
-          <FindingCard
-            severity="P2"
-            title="Correction moments lack confidence"
-            body="Add can create unresolved rows without enough intent, exclude is quiet, and save gives no closure about remaining review items."
-          />
+          {criticFindings
+            .filter((finding) => finding.severity === "P1")
+            .map((finding) => (
+              <FindingCard key={finding.title} {...finding} />
+            ))}
         </div>
       </section>
 
+      <FindingGroups findings={criticFindings} />
+
       <section className="demo-section">
-        <div className="demo-report-panel">
-          <h2>Acceptance Direction</h2>
-          <p>
-            The pack-guided revision should make issue types actionable in the first viewport, expose row review-state
-            labels, unify active filters, keep excluded rows reversible, and preserve blank-vs-zero semantics.
-          </p>
-          <div className="demo-action-row">
-            <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
-            <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
-          </div>
+        <div className="demo-two-panel-grid">
+          <ListPanel title="Acceptance Criteria" icon="tick" items={criticAcceptanceCriteria} />
+          <ListPanel title="Pack Update Recommendations" icon="changes" items={criticPackRecommendations} />
         </div>
+      </section>
+
+      <section className="demo-section demo-report-actions">
+        <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
+        <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
       </section>
     </DemoSiteShell>
   );
@@ -325,54 +545,39 @@ export function AuditReportPendingPage() {
       description="Completed implementation-quality audit of the Blueprint baseline."
       activeRoute="/audit-report"
     >
-      <section className="demo-section">
-        <Callout className="demo-callout" intent="primary" icon="endorsed">
-          Overall result: pass with concerns. Audit health score: 12 / 20.
-        </Callout>
-        <SourcePath path={auditReportPath} />
-      </section>
+      <ScoreSummary
+        result="Pass with concerns"
+        score="12 / 20"
+        sourcePath={auditReportPath}
+        body="The implementation uses Blueprint honestly and loads cleanly, but the edit-state semantics, accessibility labels, responsive behavior, and fixture coverage need hardening."
+      />
 
       <section className="demo-section">
         <div className="demo-section-heading">
-          <h2>Top Risks</h2>
-          <p>The audit found a credible implementation with one data-semantics blocker and several system gaps.</p>
+          <h2>Highlighted Risks</h2>
+          <p>The P0/P1 items define the first acceptance bar for `/pack-guided`.</p>
         </div>
         <div className="demo-finding-grid">
-          <FindingCard
-            severity="P0"
-            title="Edit/save can create an unflagged blank exposure"
-            body="Clearing an included exposure and saving can show -- without Blank exposure treatment or attention-count changes."
-          />
-          <FindingCard
-            severity="P1"
-            title="Programmatic labels are incomplete"
-            body="Some selects, status sort controls, and compact status tags lack useful accessible names."
-          />
-          <FindingCard
-            severity="P1"
-            title="Narrow viewport clips primary actions"
-            body="At 390px, Edit and collapse actions can fall offscreen and table review targets become too compressed."
-          />
-          <FindingCard
-            severity="P1"
-            title="State coverage is partial"
-            body="Loaded/edit/delete/excluded states exist, but loading, error, empty schedule, low confidence, validation, and selected/focused states need better coverage."
-          />
+          {auditFindings
+            .filter((finding) => finding.severity === "P0" || finding.severity === "P1")
+            .map((finding) => (
+              <FindingCard key={finding.title} {...finding} />
+            ))}
         </div>
       </section>
 
+      <FindingGroups findings={auditFindings} />
+
       <section className="demo-section">
-        <div className="demo-report-panel">
-          <h2>Acceptance Direction</h2>
-          <p>
-            The pack-guided revision should centralize review-state derivation, label controls/statuses, preserve primary
-            actions at 390px, add low-confidence filtering, and introduce semantic proxy theme roles.
-          </p>
-          <div className="demo-action-row">
-            <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
-            <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
-          </div>
+        <div className="demo-two-panel-grid">
+          <ListPanel title="Acceptance Criteria" icon="tick" items={auditAcceptanceCriteria} />
+          <ListPanel title="Pack Update Recommendations" icon="changes" items={auditPackRecommendations} />
         </div>
+      </section>
+
+      <section className="demo-section demo-report-actions">
+        <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
+        <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
       </section>
     </DemoSiteShell>
   );
@@ -387,8 +592,9 @@ export function ComparisonPendingPage() {
     >
       <section className="demo-section">
         <Callout icon="comparison" className="demo-callout">
-          The baseline proves a fast Blueprint build can reach credible working software. The pack-guided revision uses
-          the critique and audit to make review risk clearer, safer, and easier to act on.
+          The baseline proves a fast Blueprint build can reach credible working software. The critique and audit found
+          review-risk, edit-state, accessibility, and responsive issues. The pack-guided version makes review risk
+          actionable, edits safer, and state meaning clearer while keeping Blueprint as the component foundation.
         </Callout>
       </section>
 
@@ -403,30 +609,30 @@ export function ComparisonPendingPage() {
             <ul className="demo-check-list">
               <li>Credible compact workbench with real Blueprint components.</li>
               <li>Summary tiles, Analysis/Detail tabs, drilldowns, edit/add/delete/exclude, and CSV simulation work.</li>
-              <li>Review issues exist but are visually quiet and require discovery.</li>
-              <li>Edit/save can create an unflagged blank exposure.</li>
-              <li>Filter scope, status labels, and 390px action visibility need hardening.</li>
+              <li>Review issues exist, but the screen is quiet about what to fix first.</li>
+              <li>Edit/save, status labels, filter scope, and 390px action visibility need hardening.</li>
+              <li>Good baseline for the experiment because it is credible, not artificially weak.</li>
             </ul>
           </Card>
           <Card className="demo-comparison-card">
             <h3>Pack-guided revision</h3>
             <ul className="demo-check-list">
-              <li>First viewport names active issue types and routes to scoped Detail rows.</li>
-              <li>Review state is re-derived on edit, add, save, exclude, and restore.</li>
-              <li>Rollups and Detail rows show visible review-state labels.</li>
+              <li>First viewport names active issue flags and routes to scoped Detail rows.</li>
+              <li>Review state is re-derived on edit, add, save, and restore.</li>
+              <li>Rollups and Detail rows show stronger review-state pills and issue labels.</li>
               <li>Review status, active scope, column filters, and row counts use one visible grammar.</li>
-              <li>Save, exclude, restore, add, and download provide local-state feedback.</li>
+              <li>Save, restore, add, and download provide local-state feedback when review items remain.</li>
             </ul>
           </Card>
         </div>
       </section>
 
       <section className="demo-section">
-        <div className="demo-report-panel">
-          <h2>Remaining Scope</h2>
+        <div className="demo-report-panel demo-caveat-panel">
+          <h2>Small Caveat</h2>
           <p>
-            Loading, unavailable/error, and empty-schedule fixtures are still lighter-weight than a production QA
-            harness. The route focuses on the P0/P1 findings needed for the before/after demo.
+            Loading and fixture states are still demo-scale, not a production QA harness. The route focuses on making
+            the before/after design and system delta legible for review.
           </p>
           <div className="demo-action-row">
             <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />

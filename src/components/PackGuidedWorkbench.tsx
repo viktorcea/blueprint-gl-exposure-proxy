@@ -48,6 +48,7 @@ type ColumnFilters = Record<ColumnFilterKey, string[]>;
 type AddRowDraft = Pick<ExposureRow, "state" | "classCode" | "basis" | "amount">;
 type ReviewIssueType = Exclude<IssueType, "" | "excluded">;
 type FeedbackIntent = "primary" | "success" | "warning";
+type StateFixture = "live" | "no_results" | "empty_schedule" | "source_unavailable";
 
 interface FeedbackNotice {
   intent: FeedbackIntent;
@@ -77,7 +78,22 @@ const emptyColumnFilters: ColumnFilters = {
 };
 
 const sourceData = () => ({
-  rows: seedExposureRows.map((row) => deriveReviewState({ ...row })),
+  rows: [
+    ...seedExposureRows.map((row) => deriveReviewState({ ...row })),
+    deriveReviewState({
+      id: "EXP-012",
+      sourceId: "EMAIL-002",
+      state: "Unknown",
+      classCode: "60010",
+      classDescription: classOptions["60010"],
+      basis: "Units",
+      amount: 8376,
+      sourceType: "Extractor Draft",
+      status: "excluded",
+      issueType: "excluded",
+      issueLabel: "Excluded"
+    })
+  ],
   locations: sourceLocations.map((location) => ({ ...location }))
 });
 
@@ -117,6 +133,13 @@ const issueLabelByType: Record<ReviewIssueType, string> = {
   blank_exposure: "Blank exposure",
   unknown_state: "Unknown state",
   low_confidence: "Low confidence"
+};
+
+const stateFixtureLabels: Record<StateFixture, string> = {
+  live: "Live review",
+  no_results: "Filtered no results",
+  empty_schedule: "Empty schedule",
+  source_unavailable: "Source unavailable"
 };
 
 function isUnknownState(state: string) {
@@ -166,7 +189,7 @@ function issueSummary(rows: ExposureRow[]) {
     .map((issue) => ({
       issue,
       label: issueLabelByType[issue],
-      rows: rows.filter((row) => row.issueType === issue && row.status === "review")
+      rows: rows.filter((row) => row.status === "review" && reviewIssueTypesFor(row).includes(issue))
     }))
     .filter((item) => item.rows.length > 0);
 }
@@ -192,6 +215,7 @@ export function PackGuidedWorkbench() {
   const [analysisSort, setAnalysisSort] = useState<SortState>({ key: "total", dir: "desc" });
   const [detailSort, setDetailSort] = useState<SortState>({ key: "state", dir: "asc" });
   const [feedbackNotice, setFeedbackNotice] = useState<FeedbackNotice | null>(null);
+  const [stateFixture, setStateFixture] = useState<StateFixture>("live");
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState<AddRowDraft>({
     state: "Unknown",
@@ -201,11 +225,18 @@ export function PackGuidedWorkbench() {
   });
   const [deleteTarget, setDeleteTarget] = useState<ExposureRow | null>(null);
 
-  const includedRows = exposureRows.filter((row) => row.status !== "excluded");
+  const viewRows = useMemo(
+    () => (stateFixture === "empty_schedule" ? [] : exposureRows),
+    [exposureRows, stateFixture]
+  );
+  const includedRows = viewRows.filter((row) => row.status !== "excluded");
   const issueItems = issueSummary(includedRows);
   const detailRows = useMemo(
-    () => getDetailRows(exposureRows, locations, detailScope, detailFilter, columnFilters),
-    [exposureRows, locations, detailScope, detailFilter, columnFilters]
+    () =>
+      stateFixture === "no_results"
+        ? []
+        : getDetailRows(viewRows, locations, detailScope, detailFilter, columnFilters),
+    [viewRows, locations, detailScope, detailFilter, columnFilters, stateFixture]
   );
   const sortedDetailRows = useMemo(
     () =>
@@ -226,7 +257,7 @@ export function PackGuidedWorkbench() {
   );
   const metrics = useMemo(() => buildMetrics(includedRows, locations), [includedRows, locations]);
   const attentionCount = includedRows.filter(needsPackAttention).length;
-  const excludedCount = exposureRows.filter((row) => row.status === "excluded").length;
+  const excludedCount = viewRows.filter((row) => row.status === "excluded").length;
   const selectedColumnFilterCount = Object.values(columnFilters).reduce((sum, values) => sum + values.length, 0);
   const draftPreview = deriveReviewState({
     id: "DRAFT",
@@ -246,6 +277,29 @@ export function PackGuidedWorkbench() {
   const showFeedback = (notice: FeedbackNotice) => {
     setFeedbackNotice(notice);
     window.setTimeout(() => setFeedbackNotice(null), 3600);
+  };
+
+  const activateFixture = (fixture: StateFixture) => {
+    setStateFixture(fixture);
+    setEditMode(false);
+    setEditSnapshot(null);
+    setDetailScope(null);
+    setColumnFilters(emptyColumnFilters);
+    if (fixture === "no_results") {
+      setActiveView("detail");
+      setDetailFilter("attention");
+    } else if (fixture === "empty_schedule") {
+      setActiveView("analysis");
+      setDetailFilter("all");
+    } else if (fixture === "source_unavailable") {
+      setDetailFilter("all");
+      showFeedback({
+        intent: "warning",
+        message: "Source sync unavailable. Cached synthetic rows remain visible for review."
+      });
+    } else {
+      setDetailFilter("all");
+    }
   };
 
   const updateRow = (rowId: string, patch: Partial<ExposureRow>) => {
@@ -291,13 +345,39 @@ export function PackGuidedWorkbench() {
     setDetailScope({ label, rowIds: scopedRows.map((row) => row.id) });
     setDetailFilter("all");
     setActiveView("detail");
+    setStateFixture("live");
   };
 
   const drillToIssue = (issue: ReviewIssueType) => {
-    const rows = includedRows.filter((row) => row.issueType === issue && row.status === "review");
-    setDetailScope({ label: `${issueLabelByType[issue]} review`, rowIds: rows.map((row) => row.id) });
+    const scopedRows = includedRows.filter((row) => row.status === "review" && reviewIssueTypesFor(row).includes(issue));
     setDetailFilter(issue);
     setActiveView("detail");
+    setDetailScope({ label: `${issueLabelByType[issue]} review`, rowIds: scopedRows.map((row) => row.id) });
+    setStateFixture("live");
+  };
+
+  const showExcludedRows = () => {
+    setActiveView("detail");
+    setDetailScope(null);
+    setDetailFilter("excluded");
+    setStateFixture("live");
+  };
+
+  const restoreRow = (rowId: string) => {
+    let restoredId = rowId;
+    setExposureRows((current) =>
+      current.map((row) => {
+        if (row.id !== rowId) return row;
+        restoredId = row.id;
+        return deriveReviewState({ ...row, status: "included", issueType: "", issueLabel: "" });
+      })
+    );
+    setDetailFilter("attention");
+    setActiveView("detail");
+    showFeedback({
+      intent: "warning",
+      message: `${restoredId} restored to active rows. Review state was re-derived before returning to totals.`
+    });
   };
 
   const addExposure = () => {
@@ -337,6 +417,7 @@ export function PackGuidedWorkbench() {
     setAddOpen(false);
     setDraft({ state: "Unknown", classCode: "", basis: "Units", amount: null });
     setActiveView("detail");
+    setStateFixture("live");
     setDetailFilter(row.issueType && row.issueType !== "excluded" ? row.issueType : "all");
     showFeedback({
       intent: row.status === "review" ? "warning" : "success",
@@ -348,7 +429,7 @@ export function PackGuidedWorkbench() {
   };
 
   const downloadCsv = () => {
-    downloadRowsAsCsv(exposureRows);
+    downloadRowsAsCsv(viewRows);
     showFeedback({
       intent: attentionCount ? "warning" : "success",
       message: `CSV download simulated. ${formatNumber(attentionCount)} review item${
@@ -373,7 +454,15 @@ export function PackGuidedWorkbench() {
               <Tag minimal intent={attentionCount ? "warning" : "success"}>
                 {formatNumber(attentionCount)} review items
               </Tag>
-              {excludedCount > 0 && <Tag minimal>{formatNumber(excludedCount)} excluded</Tag>}
+              {excludedCount > 0 && (
+                <Button
+                  className="header-chip-button"
+                  minimal
+                  small
+                  text={`${formatNumber(excludedCount)} excluded`}
+                  onClick={showExcludedRows}
+                />
+              )}
             </div>
           </div>
           <ButtonGroup className="header-actions">
@@ -393,12 +482,27 @@ export function PackGuidedWorkbench() {
           <>
             <ReviewSummary items={issueItems} total={attentionCount} onIssueClick={drillToIssue} />
 
+            <StateCoverageStrip
+              activeFixture={stateFixture}
+              excludedCount={excludedCount}
+              onFixture={activateFixture}
+              onShowExcluded={showExcludedRows}
+            />
+
+            {stateFixture === "source_unavailable" && (
+              <Callout className="pack-system-callout" intent="warning" icon="warning-sign">
+                Source sync is unavailable in this fixture. Cached synthetic rows stay visible, and download/save feedback
+                continues to name remaining review items.
+              </Callout>
+            )}
+
             <MetricBar
               metrics={metrics}
               activeView={activeView}
               groupBy={groupBy}
               expanded={expanded}
               onBasisMetric={(basis) => {
+                setStateFixture("live");
                 setDetailScope(null);
                 setActiveView("analysis");
                 setGroupBy("basis");
@@ -408,11 +512,13 @@ export function PackGuidedWorkbench() {
                 ]);
               }}
               onClassMetric={() => {
+                setStateFixture("live");
                 setDetailScope(null);
                 setActiveView("analysis");
                 setGroupBy("class");
               }}
               onLocationsMetric={() => {
+                setStateFixture("live");
                 setActiveView("detail");
                 setDetailScope(null);
                 setDetailFilter("all");
@@ -492,9 +598,11 @@ export function PackGuidedWorkbench() {
                 detailFilter={detailFilter}
                 columnFilterCount={selectedColumnFilterCount}
                 resultCount={detailRows.length}
+                stateFixture={stateFixture}
                 onClearScope={() => setDetailScope(null)}
                 onClearReviewStatus={() => setDetailFilter("all")}
                 onClearColumnFilters={() => setColumnFilters(emptyColumnFilters)}
+                onClearFixture={() => activateFixture("live")}
               />
             )}
 
@@ -529,7 +637,9 @@ export function PackGuidedWorkbench() {
                   sort={detailSort}
                   onSort={(key) => setDetailSort((current) => nextSort(current, key, numericDetailSorts))}
                   onUpdateRow={updateRow}
+                  onRestoreRow={restoreRow}
                   onDeleteRow={(row) => setDeleteTarget(row)}
+                  emptyLabel={detailEmptyLabel(detailFilter, detailScope, stateFixture, selectedColumnFilterCount)}
                 />
               )}
             </section>
@@ -671,12 +781,12 @@ function ReviewSummary({
       <div>
         <div className="review-summary-title">
           {total
-            ? `${formatNumber(total)} review item${total === 1 ? "" : "s"} need attention`
+            ? `${formatNumber(total)} active row${total === 1 ? "" : "s"} need review`
             : "No active review items"}
         </div>
         <div className="review-summary-copy">
           {total
-            ? "Start with the issue type, then drill into scoped Detail rows."
+            ? "Issue flags open scoped Detail rows and keep missing, blank, unknown, and low-confidence states visible."
             : "Active rows are ready for review, edit, or download."}
         </div>
       </div>
@@ -702,26 +812,83 @@ function ReviewSummary({
   );
 }
 
+function StateCoverageStrip({
+  activeFixture,
+  excludedCount,
+  onFixture,
+  onShowExcluded
+}: {
+  activeFixture: StateFixture;
+  excludedCount: number;
+  onFixture: (fixture: StateFixture) => void;
+  onShowExcluded: () => void;
+}) {
+  return (
+    <section className="state-coverage-row" aria-label="Pack-guided state coverage">
+      <div className="state-coverage-copy">
+        <span className="state-coverage-label">State coverage</span>
+        <span>Low confidence, excluded rows, no-results, empty schedule, and source-unavailable fixtures.</span>
+      </div>
+      <ButtonGroup className="state-coverage-actions">
+        <Button
+          small
+          minimal={activeFixture !== "live"}
+          intent={activeFixture === "live" ? "primary" : undefined}
+          text="Live review"
+          onClick={() => onFixture("live")}
+        />
+        <Button small minimal text={`${formatNumber(excludedCount)} excluded`} onClick={onShowExcluded} />
+        <Button
+          small
+          minimal={activeFixture !== "no_results"}
+          intent={activeFixture === "no_results" ? "primary" : undefined}
+          text="No results"
+          onClick={() => onFixture("no_results")}
+        />
+        <Button
+          small
+          minimal={activeFixture !== "empty_schedule"}
+          intent={activeFixture === "empty_schedule" ? "primary" : undefined}
+          text="Empty schedule"
+          onClick={() => onFixture("empty_schedule")}
+        />
+        <Button
+          small
+          minimal={activeFixture !== "source_unavailable"}
+          intent={activeFixture === "source_unavailable" ? "primary" : undefined}
+          text="Unavailable"
+          onClick={() => onFixture("source_unavailable")}
+        />
+      </ButtonGroup>
+    </section>
+  );
+}
+
 function ActiveFilterBar({
   detailScope,
   detailFilter,
   columnFilterCount,
   resultCount,
+  stateFixture,
   onClearScope,
   onClearReviewStatus,
-  onClearColumnFilters
+  onClearColumnFilters,
+  onClearFixture
 }: {
   detailScope: DetailScope | null;
   detailFilter: DetailFilter;
   columnFilterCount: number;
   resultCount: number;
+  stateFixture: StateFixture;
   onClearScope: () => void;
   onClearReviewStatus: () => void;
   onClearColumnFilters: () => void;
+  onClearFixture: () => void;
 }) {
   const reviewStatusLabel = detailFilterOptions.find((option) => option.value === detailFilter)?.label ?? detailFilter;
   const hasReviewFilter = detailFilter !== "all";
-  const hasAnyFilter = Boolean(detailScope || hasReviewFilter || columnFilterCount);
+  const hasStateFixture = stateFixture !== "live";
+  const hasAnyFilter = Boolean(detailScope || hasReviewFilter || columnFilterCount || hasStateFixture);
 
   return (
     <section className="active-filter-row" aria-label="Active detail filters">
@@ -743,9 +910,14 @@ function ActiveFilterBar({
               Column filters: {formatNumber(columnFilterCount)}
             </Tag>
           )}
+          {hasStateFixture && (
+            <Tag minimal intent="warning" onRemove={onClearFixture}>
+              Scenario: {stateFixtureLabels[stateFixture]}
+            </Tag>
+          )}
         </div>
       ) : (
-        <span className="active-filter-empty">No scope or column filters applied</span>
+        <span className="active-filter-empty">Full Detail scope</span>
       )}
     </section>
   );
@@ -1050,17 +1222,21 @@ function RollupIssueButton({
   if (!attentionRows.length) return null;
   const critical = attentionRows.some(isCriticalIssue);
   const groupedIssues = issueSummary(attentionRows);
-  const issueTextValue = groupedIssues.map((item) => `${item.label} ${item.rows.length}`).join(", ");
-  const title = `${attentionRows.length} row${attentionRows.length === 1 ? "" : "s"} need review: ${issueTextValue}`;
+  const issueParts = groupedIssues.map((item) => `${item.label} ${item.rows.length}`);
+  const fullIssueText = issueParts.join(", ");
+  const issueTextValue =
+    issueParts.length > 1
+      ? `${issueParts[0]} +${issueParts.length - 1} flag${issueParts.length === 2 ? "" : "s"}`
+      : issueParts[0];
+  const title = `${attentionRows.length} row${attentionRows.length === 1 ? "" : "s"} need review: ${fullIssueText}`;
   return (
     <Tooltip content={title}>
       <Button
         aria-label={title}
         small
         minimal
-        className="rollup-issue-button"
+        className={`rollup-issue-button ${critical ? "is-critical" : "is-advisory"}`}
         icon="warning-sign"
-        intent={critical ? "danger" : "warning"}
         text={issueTextValue}
         onClick={() => onDrill(rows, `${label}: needs review`, true)}
       />
@@ -1228,7 +1404,9 @@ function DetailTable({
   sort,
   onSort,
   onUpdateRow,
-  onDeleteRow
+  onRestoreRow,
+  onDeleteRow,
+  emptyLabel
 }: {
   rows: Array<ExposureRow & { city: string; sourceLabel: string; issueSort: string }>;
   editMode: boolean;
@@ -1236,9 +1414,11 @@ function DetailTable({
   sort: { key: string; dir: "asc" | "desc" };
   onSort: (key: string) => void;
   onUpdateRow: (rowId: string, patch: Partial<ExposureRow>) => void;
+  onRestoreRow: (rowId: string) => void;
   onDeleteRow: (row: ExposureRow) => void;
+  emptyLabel: string;
 }) {
-  const showActions = editMode;
+  const showActions = editMode || rows.some((row) => row.status === "excluded");
   return (
     <table className={`work-table detail-table ${Classes.HTML_TABLE} ${Classes.HTML_TABLE_STRIPED}`}>
       <thead>
@@ -1338,20 +1518,66 @@ function DetailTable({
                 <td className="status-col"><IssueTag row={row} /></td>
                 {showActions && (
                   <td className="actions-col">
-                    <Tooltip content="Delete row">
-                      <Button small icon="trash" intent="danger" aria-label={`Delete ${row.id}`} onClick={() => onDeleteRow(row)} />
-                    </Tooltip>
+                    {row.status === "excluded" ? (
+                      <ButtonGroup>
+                        <Tooltip content="Restore row to active totals">
+                          <Button
+                            small
+                            icon="undo"
+                            aria-label={`Restore ${row.id}`}
+                            onClick={() => onRestoreRow(row.id)}
+                          />
+                        </Tooltip>
+                        {editMode && (
+                          <Tooltip content="Delete row">
+                            <Button
+                              small
+                              icon="trash"
+                              intent="danger"
+                              aria-label={`Delete ${row.id}`}
+                              onClick={() => onDeleteRow(row)}
+                            />
+                          </Tooltip>
+                        )}
+                      </ButtonGroup>
+                    ) : (
+                      <Tooltip content="Delete row">
+                        <Button
+                          small
+                          icon="trash"
+                          intent="danger"
+                          aria-label={`Delete ${row.id}`}
+                          onClick={() => onDeleteRow(row)}
+                        />
+                      </Tooltip>
+                    )}
                   </td>
                 )}
               </tr>
             );
           })
         ) : (
-          <EmptyRow span={showActions ? 8 : 7} label="No rows match the active Detail filters" />
+          <EmptyRow span={showActions ? 8 : 7} label={emptyLabel} />
         )}
       </tbody>
     </table>
   );
+}
+
+function detailEmptyLabel(
+  detailFilter: DetailFilter,
+  detailScope: DetailScope | null,
+  stateFixture: StateFixture,
+  columnFilterCount: number
+) {
+  if (stateFixture === "empty_schedule") return "The empty-schedule fixture has no active exposure rows.";
+  if (stateFixture === "no_results") {
+    return "No rows match this filtered no-results fixture. Clear the scenario to return to live review rows.";
+  }
+  if (detailFilter === "excluded") return "No excluded rows. Excluded rows appear here with a restore action.";
+  if (detailScope) return `No rows remain in ${detailScope.label}. Clear the active scope to return to the full Detail table.`;
+  if (columnFilterCount) return "No rows match the selected column filters. Clear filters to return to Detail rows.";
+  return "No Detail rows match the active review status.";
 }
 
 function FilterPopover({
@@ -1456,7 +1682,12 @@ function IssueTag({ row }: { row: ExposureRow }) {
     <div className="issue-tag-group" aria-label={`Review states: ${title}`}>
       {issues.map((issue) => (
         <Tooltip key={issue} content={issue === row.issueType ? issueText(row) : issueLabelByType[issue]}>
-          <Tag minimal intent="warning" className="issue-tag" icon={issue === "low_confidence" ? "help" : "warning-sign"}>
+          <Tag
+            minimal
+            intent="warning"
+            className={`issue-tag issue-${issue}`}
+            icon={issue === "low_confidence" ? "help" : "warning-sign"}
+          >
             {issueLabelByType[issue]}
           </Tag>
         </Tooltip>
