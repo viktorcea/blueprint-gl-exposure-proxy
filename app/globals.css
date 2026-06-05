@@ -388,6 +388,8 @@ select {
   --pack-excluded: #687588;
   border-color: var(--line);
   color: var(--text);
+  display: flex;
+  flex-direction: column;
 }
 
 .pack-workbench .workbench-header {
@@ -468,6 +470,15 @@ select {
 
 .pack-workbench .work-table {
   min-width: 920px;
+}
+
+.pack-workbench > :not(.table-zone) {
+  flex: 0 0 auto;
+}
+
+.pack-workbench .table-zone {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .pack-workbench .detail-table {
