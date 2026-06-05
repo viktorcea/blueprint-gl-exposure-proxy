@@ -246,7 +246,12 @@ export function GlExposureWorkbench() {
 
   return (
     <main className="page-shell">
-      <section className={`workbench ${collapsed ? "is-collapsed" : ""}`} aria-label="GL Exposures">
+      <section
+        className={`workbench ${collapsed ? "is-collapsed" : ""} ${
+          editMode && activeView === "detail" ? "is-editing" : ""
+        }`}
+        aria-label="GL Exposures"
+      >
         <header className="workbench-header">
           <div>
             <h1>GL Exposures</h1>
