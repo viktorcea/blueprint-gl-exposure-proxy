@@ -303,7 +303,7 @@ export function GlExposureWorkbench() {
               }}
             />
 
-            <div className="tabs-row">
+            <div className="tabs-row" aria-label="View and table controls">
               <Tabs
                 id="gl-exposure-tabs"
                 selectedTabId={activeView}
@@ -312,9 +312,7 @@ export function GlExposureWorkbench() {
                 <Tab id="analysis" title="Analysis" />
                 <Tab id="detail" title="Detail" />
               </Tabs>
-            </div>
 
-            <section className="control-row" aria-label="Workbench controls">
               {activeView === "analysis" ? (
                 <div className="control-cluster">
                   <FormGroup label="Group by" className="compact-control">
@@ -386,7 +384,7 @@ export function GlExposureWorkbench() {
                   )}
                 </div>
               )}
-            </section>
+            </div>
 
             {downloadNotice && (
               <Callout className="download-callout" intent="success">

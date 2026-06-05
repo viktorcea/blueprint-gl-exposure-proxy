@@ -302,14 +302,17 @@ export function PackGuidedWorkbench() {
 
   const excludeRow = (rowId: string) => {
     updateRow(rowId, { status: "excluded", issueType: "excluded", issueLabel: "Excluded" });
+    setDetailScope(null);
+    setDetailFilter("excluded");
     showFeedback({
       intent: "warning",
-      message: "Row excluded from active totals. Use Review status: Excluded to restore it."
+      message: "Row excluded from active totals. The excluded scope is shown so it can be restored."
     });
   };
 
   const restoreRow = (rowId: string) => {
     updateRow(rowId, { status: "included", issueType: "", issueLabel: "" });
+    setDetailFilter("all");
     showFeedback({ intent: "primary", message: "Row restored and review state recalculated." });
   };
 
@@ -432,7 +435,7 @@ export function PackGuidedWorkbench() {
               }}
             />
 
-            <div className="tabs-row">
+            <div className="tabs-row" aria-label="View and table controls">
               <Tabs
                 id="gl-exposure-tabs"
                 selectedTabId={activeView}
@@ -441,9 +444,7 @@ export function PackGuidedWorkbench() {
                 <Tab id="analysis" title="Analysis" />
                 <Tab id="detail" title="Detail" />
               </Tabs>
-            </div>
 
-            <section className="control-row" aria-label="Workbench controls">
               {activeView === "analysis" ? (
                 <div className="control-cluster">
                   <FormGroup label="Group by" labelFor="pack-group-by" className="compact-control">
@@ -475,19 +476,6 @@ export function PackGuidedWorkbench() {
                 </div>
               ) : (
                 <div className="control-cluster detail-control-cluster">
-                  <FormGroup label="Review status" labelFor="pack-detail-review-status" className="compact-control">
-                    <HTMLSelect
-                      id="pack-detail-review-status"
-                      value={detailFilter}
-                      onChange={(event) => setDetailFilter(event.currentTarget.value as DetailFilter)}
-                    >
-                      {detailFilterOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </HTMLSelect>
-                  </FormGroup>
                   <FilterPopover
                     rows={detailFilter === "excluded" ? exposureRows : includedRows}
                     locations={locations}
@@ -512,7 +500,7 @@ export function PackGuidedWorkbench() {
                   )}
                 </div>
               )}
-            </section>
+            </div>
 
             {activeView === "detail" && (
               <ActiveFilterBar
