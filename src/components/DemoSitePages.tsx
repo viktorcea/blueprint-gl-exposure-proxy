@@ -15,6 +15,7 @@ const navRoutes = [
   { href: "/review-method", label: "Review method" },
   { href: "/critic-report", label: "Critic report" },
   { href: "/audit-report", label: "Audit report" },
+  { href: "/pack-guided", label: "Pack guided" },
   { href: "/comparison", label: "Comparison" }
 ];
 
@@ -96,7 +97,7 @@ function RouteCard({ route }: { route: DemoRoute }) {
 function SourcePath({ path }: { path: string }) {
   return (
     <div className="demo-source-block">
-      <div className="demo-source-label">Expected source file</div>
+      <div className="demo-source-label">Source file</div>
       <code>{path}</code>
     </div>
   );
@@ -120,51 +121,53 @@ export function DemoOverviewPage() {
     },
     {
       title: "Critic report",
-      status: "Pending",
-      body: "The critique has not been completed yet. This page will stay empty of findings until the Markdown source is filled.",
+      status: "Available",
+      body: "Completed design critique of the Blueprint baseline: pass with concerns, 24 / 40.",
       href: "/critic-report",
-      action: "View pending page",
+      action: "Read critique",
       sourcePath: criticReportPath
     },
     {
       title: "Audit report",
-      status: "Pending",
-      body: "The technical/system audit has not been completed yet. This page will stay empty of findings until the Markdown source is filled.",
+      status: "Available",
+      body: "Completed technical/system audit of the Blueprint baseline: pass with concerns, 12 / 20.",
       href: "/audit-report",
-      action: "View pending page",
+      action: "Read audit",
       sourcePath: auditReportPath
     },
     {
-      title: "Comparison",
-      status: "Pending",
-      body: "The before/after comparison waits until the pack-guided version exists and both review gates have produced source findings.",
-      href: "/comparison",
-      action: "View pending page"
+      title: "Pack-guided workbench",
+      status: "Available",
+      body: "The same GL Exposure workflow revised with review-state derivation, actionable issue summary, clearer filters, and proxy operational theme roles.",
+      href: "/pack-guided",
+      action: "Open revision"
     },
     {
-      title: "Pack-guided route",
-      status: "Not built",
-      body: "The improved GL Exposure workbench is intentionally held until both review source files are completed."
+      title: "Comparison",
+      status: "Available",
+      body: "A concise before/after summary of what Blueprint solved, what review caught, and what the pack-guided revision changes.",
+      href: "/comparison",
+      action: "Compare versions"
     }
   ];
 
   return (
     <DemoSiteShell
       title="Blueprint.js GL Exposure Proxy Experiment"
-      description="A small working demo for comparing a fair Blueprint.js baseline with a later UX pack-guided revision."
+      description="A small working demo comparing a fair Blueprint.js baseline with a UX pack-guided revision."
       activeRoute="/"
     >
       <section className="demo-section">
         <Callout className="demo-callout" icon="info-sign">
-          The interim site is a navigation and review shell. It preserves the baseline, identifies the two required
-          review gates, and marks unfinished reports without inventing findings.
+          The site preserves the baseline, shows the completed critique and audit gates, and opens the pack-guided
+          workbench that responds to those findings.
         </Callout>
       </section>
 
       <section className="demo-section" aria-labelledby="demo-routes-heading">
         <div className="demo-section-heading">
           <h2 id="demo-routes-heading">Routes</h2>
-          <p>Available routes can be reviewed now. Pending routes describe their required source material.</p>
+          <p>Open the baseline first, then compare the review outputs with the pack-guided revision.</p>
         </div>
         <div className="demo-route-grid">
           {routes.map((route) => (
@@ -233,61 +236,145 @@ export function ReviewMethodPage() {
   );
 }
 
-function PendingReportPage({
+function FindingCard({
+  severity,
   title,
-  description,
-  sourcePath,
-  activeRoute,
-  nextStep
+  body
 }: {
+  severity: string;
   title: string;
-  description: string;
-  sourcePath: string;
-  activeRoute: string;
-  nextStep: string;
+  body: string;
 }) {
   return (
-    <DemoSiteShell title={title} description={description} activeRoute={activeRoute}>
+    <Card className="demo-finding-card">
+      <div className="demo-card-header">
+        <h3>{title}</h3>
+        <Tag minimal intent={severity === "P0" || severity === "P1" ? "warning" : undefined}>
+          {severity}
+        </Tag>
+      </div>
+      <p>{body}</p>
+    </Card>
+  );
+}
+
+export function CriticReportPendingPage() {
+  return (
+    <DemoSiteShell
+      title="Critic Report"
+      description="Completed design-quality critique of the Blueprint baseline."
+      activeRoute="/critic-report"
+    >
       <section className="demo-section">
-        <Callout intent="warning" icon="time" className="demo-callout">
-          This report has not been completed yet. No findings, scores, risks, or acceptance criteria are shown here
-          until the source Markdown file is filled in.
+        <Callout className="demo-callout" intent="primary" icon="endorsed">
+          Overall result: pass with concerns. Design health score: 24 / 40.
         </Callout>
+        <SourcePath path={criticReportPath} />
+      </section>
+
+      <section className="demo-section">
+        <div className="demo-section-heading">
+          <h2>Top Risks</h2>
+          <p>The critique found a credible baseline whose review workflow is functional but too quiet.</p>
+        </div>
+        <div className="demo-finding-grid">
+          <FindingCard
+            severity="P1"
+            title="First-viewport review summary is passive"
+            body="The header shows a compact count, but does not name Missing class or Blank exposure or route directly to affected rows."
+          />
+          <FindingCard
+            severity="P1"
+            title="Rollup review indicators are too compact"
+            body="Issue drilldown works, but the visible rollup state is a small far-right icon instead of an inline issue label/count."
+          />
+          <FindingCard
+            severity="P1"
+            title="Scope and filter state are easy to misread"
+            body="A scoped Detail tag, a Show select, and a separate Filter popover force the user to infer which filters are active."
+          />
+          <FindingCard
+            severity="P2"
+            title="Correction moments lack confidence"
+            body="Add can create unresolved rows without enough intent, exclude is quiet, and save gives no closure about remaining review items."
+          />
+        </div>
       </section>
 
       <section className="demo-section">
         <div className="demo-report-panel">
-          <h2>Expected Source</h2>
-          <SourcePath path={sourcePath} />
-          <p>{nextStep}</p>
-          <AnchorButton href="/review-method" minimal icon="arrow-left" text="Review method" />
+          <h2>Acceptance Direction</h2>
+          <p>
+            The pack-guided revision should make issue types actionable in the first viewport, expose row review-state
+            labels, unify active filters, keep excluded rows reversible, and preserve blank-vs-zero semantics.
+          </p>
+          <div className="demo-action-row">
+            <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
+            <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
+          </div>
         </div>
       </section>
     </DemoSiteShell>
   );
 }
 
-export function CriticReportPendingPage() {
-  return (
-    <PendingReportPage
-      title="Critic Report"
-      description="Pending design critique for the Blueprint baseline."
-      sourcePath={criticReportPath}
-      activeRoute="/critic-report"
-      nextStep="Run the independent design critique against /blueprint-base, then use the completed Markdown file as the report source."
-    />
-  );
-}
-
 export function AuditReportPendingPage() {
   return (
-    <PendingReportPage
+    <DemoSiteShell
       title="Audit Report"
-      description="Pending technical/system audit for the Blueprint baseline."
-      sourcePath={auditReportPath}
+      description="Completed implementation-quality audit of the Blueprint baseline."
       activeRoute="/audit-report"
-      nextStep="Run the technical/system audit against /blueprint-base, then use the completed Markdown file as the report source."
-    />
+    >
+      <section className="demo-section">
+        <Callout className="demo-callout" intent="primary" icon="endorsed">
+          Overall result: pass with concerns. Audit health score: 12 / 20.
+        </Callout>
+        <SourcePath path={auditReportPath} />
+      </section>
+
+      <section className="demo-section">
+        <div className="demo-section-heading">
+          <h2>Top Risks</h2>
+          <p>The audit found a credible implementation with one data-semantics blocker and several system gaps.</p>
+        </div>
+        <div className="demo-finding-grid">
+          <FindingCard
+            severity="P0"
+            title="Edit/save can create an unflagged blank exposure"
+            body="Clearing an included exposure and saving can show -- without Blank exposure treatment or attention-count changes."
+          />
+          <FindingCard
+            severity="P1"
+            title="Programmatic labels are incomplete"
+            body="Some selects, status sort controls, and compact status tags lack useful accessible names."
+          />
+          <FindingCard
+            severity="P1"
+            title="Narrow viewport clips primary actions"
+            body="At 390px, Edit and collapse actions can fall offscreen and table review targets become too compressed."
+          />
+          <FindingCard
+            severity="P1"
+            title="State coverage is partial"
+            body="Loaded/edit/delete/excluded states exist, but loading, error, empty schedule, low confidence, validation, and selected/focused states need better coverage."
+          />
+        </div>
+      </section>
+
+      <section className="demo-section">
+        <div className="demo-report-panel">
+          <h2>Acceptance Direction</h2>
+          <p>
+            The pack-guided revision should centralize review-state derivation, label controls/statuses, preserve primary
+            actions at 390px, add low-confidence filtering, and introduce semantic proxy theme roles.
+          </p>
+          <div className="demo-action-row">
+            <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
+            <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
+          </div>
+        </div>
+      </section>
+    </DemoSiteShell>
   );
 }
 
@@ -295,27 +382,57 @@ export function ComparisonPendingPage() {
   return (
     <DemoSiteShell
       title="Comparison"
-      description="The before/after comparison waits for the pack-guided GL Exposure workbench."
+      description="What changed between the fair Blueprint baseline and the UX pack-guided revision."
       activeRoute="/comparison"
     >
       <section className="demo-section">
-        <Callout intent="warning" icon="timeline-events" className="demo-callout">
-          The comparison is pending. It should be completed only after /pack-guided exists and both review source files
-          contain completed findings.
+        <Callout icon="comparison" className="demo-callout">
+          The baseline proves a fast Blueprint build can reach credible working software. The pack-guided revision uses
+          the critique and audit to make review risk clearer, safer, and easier to act on.
         </Callout>
       </section>
 
       <section className="demo-section">
+        <div className="demo-section-heading">
+          <h2>Before And After</h2>
+          <p>The comparison is about product clarity and system behavior, not making Blueprint look bad.</p>
+        </div>
+        <div className="demo-comparison-grid">
+          <Card className="demo-comparison-card">
+            <h3>Blueprint baseline</h3>
+            <ul className="demo-check-list">
+              <li>Credible compact workbench with real Blueprint components.</li>
+              <li>Summary tiles, Analysis/Detail tabs, drilldowns, edit/add/delete/exclude, and CSV simulation work.</li>
+              <li>Review issues exist but are visually quiet and require discovery.</li>
+              <li>Edit/save can create an unflagged blank exposure.</li>
+              <li>Filter scope, status labels, and 390px action visibility need hardening.</li>
+            </ul>
+          </Card>
+          <Card className="demo-comparison-card">
+            <h3>Pack-guided revision</h3>
+            <ul className="demo-check-list">
+              <li>First viewport names active issue types and routes to scoped Detail rows.</li>
+              <li>Review state is re-derived on edit, add, save, exclude, and restore.</li>
+              <li>Rollups and Detail rows show visible review-state labels.</li>
+              <li>Review status, active scope, column filters, and row counts use one visible grammar.</li>
+              <li>Save, exclude, restore, add, and download provide local-state feedback.</li>
+            </ul>
+          </Card>
+        </div>
+      </section>
+
+      <section className="demo-section">
         <div className="demo-report-panel">
-          <h2>What Will Be Compared</h2>
+          <h2>Remaining Scope</h2>
           <p>
-            The eventual comparison will summarize what the Blueprint baseline solved, what the critique and audit
-            identified, and how the pack-guided revision responded. No improved table or findings are introduced on
-            this interim page.
+            Loading, unavailable/error, and empty-schedule fixtures are still lighter-weight than a production QA
+            harness. The route focuses on the P0/P1 findings needed for the before/after demo.
           </p>
           <div className="demo-action-row">
             <AnchorButton href="/blueprint-base" minimal icon="arrow-left" text="Open baseline" />
-            <AnchorButton href="/review-method" minimal icon="manual" text="Review method" />
+            <AnchorButton href="/pack-guided" minimal icon="arrow-right" text="Open pack-guided" />
+            <AnchorButton href="/critic-report" minimal icon="manual" text="Critic report" />
+            <AnchorButton href="/audit-report" minimal icon="clipboard" text="Audit report" />
           </div>
         </div>
       </section>

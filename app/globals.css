@@ -371,6 +371,160 @@ select {
   margin-top: 8px;
 }
 
+.pack-workbench {
+  --surface: #ffffff;
+  --surface-soft: #f5f7fa;
+  --line: #d2dbe6;
+  --line-soft: #e1e7ef;
+  --text: #24364b;
+  --muted: #596b7f;
+  --selected: #e7eff7;
+  --selected-line: #6f91b1;
+  --pack-action: #174a7c;
+  --pack-review: #9a6415;
+  --pack-review-bg: #fff4df;
+  --pack-review-border: #e6c17c;
+  --pack-confirmed: #266b45;
+  --pack-excluded: #687588;
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.pack-workbench .workbench-header {
+  border-bottom-color: var(--line);
+}
+
+.pack-workbench .bp6-button.bp6-intent-primary {
+  background-color: var(--pack-action);
+}
+
+.pack-workbench .bp6-button.bp6-intent-primary:hover {
+  background-color: #103d69;
+}
+
+.review-summary-row {
+  min-height: 68px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+}
+
+.review-summary-title {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 750;
+}
+
+.review-summary-copy {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.review-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.active-filter-row {
+  min-height: 38px;
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #fbfcfd;
+}
+
+.active-filter-count {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.active-filter-tags {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.active-filter-empty {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.pack-workbench .work-table {
+  min-width: 920px;
+}
+
+.pack-workbench .detail-table {
+  min-width: 1080px;
+}
+
+.pack-workbench .status-col {
+  width: 188px;
+  text-align: left;
+}
+
+.pack-workbench .actions-col {
+  width: 128px;
+}
+
+.pack-workbench th.status-col .bp6-button.sort-button {
+  justify-content: flex-start;
+}
+
+.rollup-issue-button {
+  max-width: 176px;
+  justify-content: flex-start;
+  color: var(--pack-review);
+}
+
+.rollup-issue-button .bp6-button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-tag-group {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-tag {
+  max-width: 150px;
+  border-color: var(--pack-review-border);
+  background: var(--pack-review-bg);
+  color: var(--pack-review);
+}
+
+.issue-tag .bp6-tag-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.excluded-issue-tag {
+  border-color: var(--line);
+  background: #f2f4f7;
+  color: var(--pack-excluded);
+}
+
 .demo-shell {
   min-height: 100vh;
   background: var(--page-bg);
@@ -562,6 +716,39 @@ select {
   gap: 8px;
 }
 
+.demo-finding-grid,
+.demo-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.demo-finding-card,
+.demo-comparison-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border-color: var(--line);
+  border-radius: 7px;
+}
+
+.demo-finding-card h3,
+.demo-comparison-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.demo-finding-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 @media (max-width: 860px) {
   .page-shell {
     padding: 0;
@@ -610,6 +797,31 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .pack-workbench .optional {
+    display: table-cell;
+  }
+
+  .pack-workbench .workbench-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pack-workbench .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .review-summary-row,
+  .active-filter-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .review-issue-actions,
+  .active-filter-tags {
+    justify-content: flex-start;
+  }
+
   .demo-topbar-inner {
     flex-direction: column;
   }
@@ -623,7 +835,9 @@ select {
   }
 
   .demo-route-grid,
-  .demo-gate-grid {
+  .demo-gate-grid,
+  .demo-finding-grid,
+  .demo-comparison-grid {
     grid-template-columns: 1fr;
   }
 
