@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -216,6 +216,7 @@ export function PackGuidedWorkbench() {
   const [detailSort, setDetailSort] = useState<SortState>({ key: "state", dir: "asc" });
   const [feedbackNotice, setFeedbackNotice] = useState<FeedbackNotice | null>(null);
   const [stateFixture, setStateFixture] = useState<StateFixture>("live");
+  const [showFixtureControls, setShowFixtureControls] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState<AddRowDraft>({
     state: "Unknown",
@@ -273,6 +274,14 @@ export function PackGuidedWorkbench() {
     issueLabel: ""
   });
   const draftIssues = reviewIssueTypesFor(draftPreview);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fixturesParam = params.get("fixtures");
+    const fixturesEnabled = fixturesParam === "1" || fixturesParam === "true";
+    setShowFixtureControls(fixturesEnabled);
+    if (!fixturesEnabled) setStateFixture("live");
+  }, []);
 
   const showFeedback = (notice: FeedbackNotice) => {
     setFeedbackNotice(notice);
@@ -482,14 +491,16 @@ export function PackGuidedWorkbench() {
           <>
             <ReviewSummary items={issueItems} total={attentionCount} onIssueClick={drillToIssue} />
 
-            <StateCoverageStrip
-              activeFixture={stateFixture}
-              excludedCount={excludedCount}
-              onFixture={activateFixture}
-              onShowExcluded={showExcludedRows}
-            />
+            {showFixtureControls && (
+              <StateCoverageStrip
+                activeFixture={stateFixture}
+                excludedCount={excludedCount}
+                onFixture={activateFixture}
+                onShowExcluded={showExcludedRows}
+              />
+            )}
 
-            {stateFixture === "source_unavailable" && (
+            {showFixtureControls && stateFixture === "source_unavailable" && (
               <Callout className="pack-system-callout" intent="warning" icon="warning-sign">
                 Source sync is unavailable in this fixture. Cached synthetic rows stay visible, and download/save feedback
                 continues to name remaining review items.
